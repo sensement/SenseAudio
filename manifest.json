@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "SenseAudio: Visual Theory & Creative Studio",
+  "short_name": "SenseAudio",
+  "version": "1.0.0",
+  "description": "Turn static theory into music. Unlock the hidden patterns of harmony, explore chords instantly, and spark ideas with an algorithmic AI co-pilot.",
+  "homepage_url": "https://sensementmusic.com",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Open SenseAudio Studio"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage", 
+    "unlimitedStorage"
+  ],
+  "offline_enabled": true
+}

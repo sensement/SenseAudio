@@ -1,0 +1,1667 @@
+/*
+ * SenseAudio - Visual Theory & Creative Studio
+ * Copyright (C) 2026 SensementMusic.com
+ *
+ * This file is part of SenseAudio (A Sensement Music Project).
+ *
+ * SenseAudio is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * SenseAudio is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with SenseAudio. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * All branding, logos, and the name "Sensement Music" are properties of SensementMusic.com.
+ */
+
+/* ==========================================================================
+   Root Variables & Base Styles
+   ========================================================================== */
+:root {
+    --bg-main: #121212;
+    --bg-panel: #1e1e1e;
+    --bg-header: #252526;
+    --primary: #00d2d3;
+    --accent: #ff9f43;
+    --text-muted: #b3b3b3;
+    --border-light: #333;
+}
+
+body {
+    margin: 0;
+    background: var(--bg-main);
+    color: #ecf0f1;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 12px;
+}
+
+/* --- Modern Scrollbars --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* ==========================================================================
+   1. Top Menu Bar
+   ========================================================================== */
+#top-bar {
+    height: 42px;
+    background: var(--bg-header);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-bottom: 1px solid #000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    z-index: 500;
+}
+
+.logo {
+    font-weight: 700;
+    color: var(--primary);
+    margin-right: 25px;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(0, 210, 211, 0.3);
+}
+
+.menu-item {
+    padding: 0 14px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    color: #ccc;
+    position: relative;
+    transition: background 0.2s, color 0.2s;
+}
+
+.menu-item:hover {
+    background: #333;
+    color: #fff;
+}
+
+/* Dropdown Menu (Glassmorphism & Animated) */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: rgba(40, 40, 40, 0.98);
+    backdrop-filter: blur(10px);
+    border: 1px solid #555;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    min-width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    padding: 6px 0;
+    transform-origin: top center;
+}
+
+.menu-item:hover .dropdown-content {
+    display: block;
+    animation: dropdownSlideIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dropdown-content div {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #ecf0f1;
+    cursor: pointer;
+    transition: all 0.15s ease-out;
+    border-left: 3px solid transparent;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-content div:hover {
+    background-color: #353b48;
+    color: #fff;
+    border-left-color: var(--primary);
+    padding-left: 22px;
+}
+
+.dropdown-content hr {
+    border: 0;
+    height: 1px;
+    background: #444;
+    margin: 6px 0;
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scaleY(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+    }
+}
+
+.playback-controls {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* ==========================================================================
+   2. Controls Strip (Second Toolbar) - Modernized
+   ========================================================================== */
+#controls {
+    height: 48px;
+    background: #181818; /* Darker & more attractive */
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    gap: 15px;
+    border-bottom: 1px solid #000;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 10px;
+    color: #777;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Modern Input & Select Styling */
+button,
+select,
+input {
+    background: #2b2b2b;
+    color: #eee;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.2s;
+    outline: none;
+}
+
+/* Remove default styling and add custom arrow for menus */
+#controls select,
+#controls input:not([type="number"]) {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 30px;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2300d2d3%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 8px;
+    cursor: pointer;
+}
+
+button:hover,
+select:hover,
+input:hover {
+    background: #333;
+    border-color: #666;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+#controls select:focus,
+#controls input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 210, 211, 0.2);
+    color: #fff;
+}
+
+.active {
+    background: var(--accent) !important;
+    color: #121212 !important;
+    border-color: var(--accent) !important;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(255, 159, 67, 0.4);
+}
+
+/* ==========================================================================
+   3. Main Layout
+   ========================================================================== */
+#editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    position: relative;
+}
+
+#trackSidebar {
+    width: 220px;
+    background: #202020;
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.sidebar-header {
+    height: 32px;
+    background: #252526;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #000;
+    box-shadow: inset 0 -1px 0 #333;
+}
+
+#addTrackBtn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.2s;
+}
+
+#addTrackBtn:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+#trackListContainer {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 50px;
+    background: #181818;
+}
+
+/* --- Card-like Track Styles --- */
+.track-item {
+    width: 100%;
+    height: 90px;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-bottom: 1px solid #2a2a2a;
+    border-left: 4px solid transparent;
+    background: #222;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+
+    /* Mobile Fix for .track-item (Long Press) */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.track-item:hover {
+    background: #2b2b2b;
+    transform: translateX(3px);
+    box-shadow: -2px 0 10px rgba(0, 210, 211, 0.1);
+}
+
+.track-item.active {
+    background: #2f3640;
+    border-left-color: var(--primary);
+    box-shadow: inset 0 0 30px rgba(0, 210, 211, 0.05);
+    z-index: 2;
+}
+
+.track-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.track-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+    cursor: text;
+    transition: color 0.2s;
+}
+
+.track-item.active .track-name {
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.track-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.track-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid #3d3d3d;
+    background: #2b2b2b;
+    color: #777;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.2s;
+}
+
+.track-btn:hover {
+    border-color: #666;
+    color: #ddd;
+    background: #333;
+}
+
+.track-btn.muted {
+    background: #e74c3c;
+    color: white;
+    border-color: #c0392b;
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.4);
+}
+
+.track-btn.soloed {
+    background: #f1c40f;
+    color: black;
+    border-color: #f39c12;
+    box-shadow: 0 0 5px rgba(241, 196, 15, 0.4);
+}
+
+.slider-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.vol-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #111;
+    border-radius: 2px;
+    outline: none;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #7f8c8d;
+    border: 2px solid #222;
+    margin-top: -4px;
+    transition: transform 0.1s, background 0.2s;
+}
+
+.vol-slider:hover::-webkit-slider-thumb {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+/* Workspace */
+#workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #121212;
+    position: relative;
+}
+
+#chord-track-container {
+    height: 80px;
+    background: #252526;
+    border-bottom: 1px solid #000;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+}
+
+#chordCanvas {
+    display: block;
+    height: 100%;
+}
+
+#pianoRollArea {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: #121212;
+}
+
+#mainCanvas {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    display: block;
+}
+
+#playheadCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#domPlayhead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: #ff4757;
+    z-index: 999;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+}
+
+#domPlayhead::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -6px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 12px solid #ff4757;
+}
+
+#virtualSizer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 1px;
+    z-index: -1;
+}
+
+/* ==========================================================================
+   4. Tooltips & Floating Menus
+   ========================================================================== */
+#tooltip {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    z-index: 2000;
+    background: rgba(30, 30, 30, 0.95);
+    backdrop-filter: blur(4px);
+    border: 1px solid #444;
+    border-left: 3px solid var(--accent);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    color: #eee;
+}
+
+.tt-header {
+    color: var(--accent);
+    font-weight: bold;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 4px;
+    font-size: 13px;
+}
+
+.tt-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    color: #ccc;
+}
+
+/* --- Unified Modern Menu (Right & Left Click) --- */
+.unified-menu {
+    background-color: rgba(40, 40, 40, 0.98);
+    backdrop-filter: blur(10px);
+    border: 1px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    min-width: 220px;
+    padding: 6px 0;
+    z-index: 5000;
+    overflow: hidden;
+    transform-origin: top left;
+    animation: dropdownSlideIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.menu-header-label {
+    background: rgba(0, 0, 0, 0.2);
+    color: #7f8c8d;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 15px;
+    border-bottom: 1px solid #3d3d3d;
+    margin-bottom: 4px;
+    user-select: none;
+}
+
+/* --- New Styles for 3-Column Chord Menu --- */
+/* Grid settings for each chord item */
+.chord-item {
+    display: grid;
+    /* Col 1: Name | Col 2: Function Badge | Col 3: Description | Col 4: Suggestion Badge */
+    grid-template-columns: 85px 85px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.chord-item:hover {
+    background-color: #353b48;
+    color: #fff;
+    border-left-color: var(--primary);
+}
+
+.menu-icon {
+    width: 20px;
+    display: inline-block;
+    text-align: center;
+    margin-right: 10px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.danger-item:hover {
+    background-color: rgba(231, 76, 60, 0.15) !important;
+    color: #ff6b6b !important;
+    border-left-color: #ff6b6b !important;
+}
+
+/* Section Type Selection Items */
+.section-select-item {
+    padding-left: 15px;
+}
+
+.section-select-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 12px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.section-select-item.active {
+    background-color: #34495e;
+    font-weight: 700;
+}
+
+.section-select-item.active .dot {
+    box-shadow: 0 0 8px #fff;
+    border: 1px solid #fff;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background: #444;
+    margin: 6px 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Column layout inside chord menu */
+.chord-degree {
+    font-size: 13px;
+    display: inline-block;
+    width: 40px; /* Kept for legacy support inside grid if needed */
+    font-weight: 800;
+    color: var(--primary);
+    text-shadow: 0 0 5px rgba(0, 210, 211, 0.4);
+}
+
+.chord-real {
+    color: #e0e0e0;
+    font-weight: 400;
+    margin-left: 5px;
+}
+
+/* Smart Suggestions Styling */
+.chord-item.suggested {
+    border-left-color: #2ecc71 !important;
+    background-color: rgba(46, 204, 113, 0.08);
+}
+
+.chord-item.avoid {
+    opacity: 0.4;
+}
+
+/* Suggestion Badge (REC) - Realigned for Grid */
+.rec-badge {
+    font-size: 9px;
+    font-weight: bold;
+    color: #2ecc71;
+    border: 1px solid #2ecc71;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 0; /* No margin needed in Grid */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 5px rgba(46, 204, 113, 0.2);
+    white-space: nowrap;
+    justify-self: end;
+}
+
+/* Chord Function Badges */
+.func-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #121212; /* Dark text on light colors */
+    width: fit-content;
+}
+
+/* Function Color Coding */
+.badge-tonic { background-color: #00d2d3; }       /* Turquoise */
+.badge-dominant { background-color: #ff6b6b; }    /* Red */
+.badge-subdominant { background-color: #2ecc71; } /* Green */
+.badge-mediant,
+.badge-submediant { background-color: #feca57; }  /* Yellow */
+.badge-supertonic { background-color: #54a0ff; }  /* Light Blue */
+.badge-leading,
+.badge-subtonic { background-color: #c8d6e5; }    /* Grey */
+
+/* Vibe Description */
+.vibe-text {
+    font-size: 10px;
+    color: #a4b0be;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Floating Panels --- */
+.floating-panel {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 360px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 10px;
+    z-index: 4000;
+    color: white;
+    font-size: 13px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+}
+
+.panel-header {
+    background: #252526;
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+    border-radius: 10px 10px 0 0;
+    color: var(--primary);
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.panel-body {
+    padding: 25px;
+}
+
+.control-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
+.action-btn {
+    background: var(--primary);
+    color: #121212;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    margin-top: 15px;
+    transition: filter 0.2s, transform 0.1s;
+}
+
+.action-btn:hover {
+    filter: brightness(1.1);
+}
+
+.action-btn:active {
+    transform: scale(0.98);
+}
+
+/* --- Modern Melody Panel (Grid) --- */
+.melody-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 25px;
+}
+
+.melody-option.full-width {
+    grid-column: span 2;
+}
+
+.melody-option {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.melody-option label {
+    font-size: 11px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+#melodyPanel input,
+#melodyPanel select {
+    background: #2b2b2b;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#melodyPanel input:focus,
+#melodyPanel select:focus {
+    border-color: var(--primary);
+    background: #333;
+    box-shadow: 0 0 8px rgba(0, 210, 211, 0.2);
+}
+
+.melody-action {
+    grid-column: span 2;
+    margin-top: 10px;
+}
+
+.glow-btn {
+    background: linear-gradient(135deg, var(--primary), #0984e3);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(0, 210, 211, 0.4);
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.glow-btn:hover {
+    box-shadow: 0 6px 20px rgba(0, 210, 211, 0.6);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.glow-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 10px rgba(0, 210, 211, 0.3);
+}
+
+/* --- Synthesizer Panel (Refined) --- */
+.synth-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.wave-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.wave-selector label {
+    font-size: 11px;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.wave-selector select {
+    background: #2b2b2b;
+    border: 1px solid #444;
+    color: var(--primary);
+    padding: 8px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.panel-divider {
+    border: 0;
+    height: 1px;
+    background: #333;
+    margin: 0;
+}
+
+.adsr-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 180px;
+    padding: 10px 5px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.fader-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 25%;
+    position: relative;
+}
+
+.fader-col label {
+    margin-top: 20px;
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.fader-col .val-display {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+
+.fader-track {
+    width: 30px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+input[type=range].vertical-range {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    outline: none;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    cursor: pointer;
+    margin: 0;
+}
+
+input[type=range].vertical-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 8px rgba(255, 159, 67, 0.6);
+    cursor: grab;
+    transition: transform 0.1s;
+}
+
+input[type=range].vertical-range::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+    background: var(--accent);
+}
+
+input[type=range].vertical-range::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    background: linear-gradient(to right, #333, #444);
+}
+
+/* --- Synth Panel FX Section Styles --- */
+.fx-group {
+    margin-top: 10px;
+}
+
+.fx-header {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.fx-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+.fx-col {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.fx-col.full-w {
+    grid-column: span 3; /* Reverb takes full width */
+    margin-top: 5px;
+}
+
+.fx-col label {
+    font-size: 9px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+/* Small Horizontal Sliders */
+.fx-col input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.fx-col input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+    cursor: grab;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.fx-col input[type=range]:hover::-webkit-slider-thumb {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+/* Add Track Menu Styles */
+.track-dropdown {
+    position: absolute;
+    top: 45px; /* Below the button */
+    left: 10px;
+    right: 10px;
+    background: #2d3436;
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow: hidden;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.dropdown-category {
+    background: #1e1e1e;
+    color: #888;
+    font-size: 9px;
+    padding: 4px 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+}
+
+.dropdown-item {
+    padding: 8px 10px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: #00d2d3;
+    color: #000;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Chord HUD Styles (Practice Display) --- */
+/* --- New Practice Mode Styles (Current -> Next -> Later) --- */
+.practice-hud {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    max-width: 95%;
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid var(--accent);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 3000;
+}
+
+.hud-top-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #555;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.hud-cards-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.flow-arrow {
+    font-size: 20px;
+    color: #333;
+    font-weight: bold;
+}
+
+/* Current Card */
+.card-now {
+    width: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid rgba(0, 210, 211, 0.3);
+    background: rgba(0, 210, 211, 0.05);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.label-now {
+    color: var(--primary);
+    font-size: 9px;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+#hudCurrentChord {
+    font-size: 36px;
+    color: #fff;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0, 210, 211, 0.4);
+}
+
+/* Next Card - Main Focus */
+.card-focus {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 159, 67, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 15px;
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.label-next {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    animation: blinkText 2s infinite;
+    margin-bottom: 5px;
+}
+
+#hudNextChord {
+    font-size: 56px;
+    color: var(--accent);
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* Later Card */
+.card-future {
+    width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0.5;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.label-future {
+    color: #777;
+    font-size: 9px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+#hudLaterChord {
+    font-size: 28px;
+    color: #aaa;
+    font-weight: 600;
+}
+
+@keyframes blinkText {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.hud-progress-container {
+    width: 100%;
+    height: 4px;
+    background: #222;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.hud-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ==========================================================================
+   5. Glass Overlay & Modal Styles
+   ========================================================================== */
+
+/* Dark background layer (Critical: ensures it overlays everything) */
+.glass-overlay {
+    position: fixed; /* Fixed on screen */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Dark background */
+    backdrop-filter: blur(8px); /* Background blur */
+    z-index: 9999; /* Above everything else */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Fade animation */
+    opacity: 1;
+    visibility: visible;
+    transition: all 0.3s ease;
+}
+
+/* Hidden Class */
+.glass-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none; /* Not clickable when hidden */
+}
+
+/* Center Window (Modal) */
+.glass-modal {
+    width: 500px;
+    height: auto;
+    min-height: 540px;
+    max-width: 90%;
+
+    background: rgba(25, 25, 25, 0.95); /* Dark background */
+    border: 1px solid rgba(0, 210, 211, 0.3); /* Faded turquoise border */
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(0, 210, 211, 0.1); /* Outer glow */
+
+    border-radius: 24px;
+    padding: 25px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+
+    /* Opening animation (Spring effect) */
+    transform: scale(1);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Closing animation */
+.glass-overlay.hidden .glass-modal {
+    transform: scale(0.9) translateY(30px);
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 210, 211, 0.4);
+}
+
+/* Canvas Container */
+#circle-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden; /* Prevent extra scroll */
+}
+
+#circle-container canvas {
+    /* Ensure canvas fits correctly */
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* --- Chord Calculator Specific Styles --- */
+.calc-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+}
+
+.calc-top-row {
+    display: flex;
+    gap: 15px;
+}
+
+.calc-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.calc-group label {
+    font-size: 10px;
+    color: var(--primary);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Large Chord Name Display */
+.calc-display {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(0, 210, 211, 0.5);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Modifiers Section (Inversion, etc.) */
+/* Middle Buttons Layout Fix (3-Column Grid) */
+.calc-modifiers {
+    display: grid;
+    /* 3 Cols: Left(Empty) - Center(Fixed) - Right(Spacious) */
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    background: #252526;
+    padding: 8px 15px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+/* Center group (Inversion) must be exactly in the center of its cell */
+.calc-mod-center {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Right group (Spread) */
+.calc-mod-right {
+    display: flex;
+    justify-content: flex-end; /* Stick to right */
+    padding-left: 15px; /* Distance from center */
+}
+
+/* Fix Spread Button Color Issue */
+/* Default Style */
+.mod-btn {
+    background: #333;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.mod-btn:hover {
+    background: #444;
+    color: #fff;
+    border-color: #666;
+}
+
+/* Active Class (When Spread is ON) */
+.mod-btn.active {
+    background: var(--primary) !important;
+    color: #121212 !important;
+    border-color: var(--primary) !important;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 210, 211, 0.4);
+}
+
+#calcInvDisplay {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: bold;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Piano Container */
+#piano-container {
+    flex: 1;
+    background: #111;
+    border-radius: 8px;
+    border-top: 4px solid #333;
+    position: relative;
+    height: 120px; /* Fixed height */
+    min-height: 120px;
+
+    /* Scroll Settings */
+    overflow-x: auto; /* Enable horizontal scroll */
+    overflow-y: hidden;
+    white-space: nowrap; /* Prevent line break */
+
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* Custom Scrollbar for Piano (Aesthetics) */
+#piano-container::-webkit-scrollbar {
+    height: 10px; /* Horizontal scroll height */
+}
+
+#piano-container::-webkit-scrollbar-track {
+    background: #111;
+    border-radius: 0 0 8px 8px;
+}
+
+#piano-container::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 5px;
+    border: 2px solid #111; /* Border for aesthetics */
+}
+
+#piano-container::-webkit-scrollbar-thumb:hover {
+    background: var(--primary); /* Turquoise color on hover */
+}
+
+/* Bottom Buttons */
+.calc-actions {
+    display: flex;
+    justify-content: center; /* Force center alignment */
+    gap: 15px;
+    margin-top: auto;
+    width: 100%; /* Take full width */
+}
+
+.calc-desc {
+    text-align: center;
+    font-size: 12px;
+    color: #ff9f43; /* Bright and clear orange color */
+    font-weight: normal;
+    font-style: italic;
+
+    margin-top: 5px; /* Add positive margin to avoid overlap */
+    margin-bottom: 10px;
+
+    min-height: 18px; /* Reserved height */
+    z-index: 10; /* Higher layer */
+    position: relative;
+
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Shadow for readability */
+}
+
+.instrument-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two columns */
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.inst-item:hover {
+    background-color: var(--primary) !important;
+    color: #000;
+}
+
+/* Context Menu */
+.context-menu {
+    position: absolute;
+    background: #2d3436;
+    border: 1px solid #555;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 2000; /* Above everything else */
+    min-width: 160px;
+    padding: 5px 0;
+}
+
+.ctx-item {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #eee;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.ctx-item:hover {
+    background-color: var(--primary);
+    color: #1e272e;
+}
+
+/* --- Portrait Mode Blocker --- */
+#portrait-warning {
+    display: none; /* Hidden by default */
+}
+
+/* Only active when:
+   1. Portrait orientation
+   2. Width < 900px (Mobile/Tablet) 
+*/
+@media screen and (orientation: portrait) and (max-width: 900px) {
+    #portrait-warning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #121212; /* Completely dark background */
+        z-index: 99999; /* Highest possible layer */
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    #portrait-warning h2 {
+        color: var(--primary);
+        margin-top: 20px;
+        font-size: 18px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    #portrait-warning p {
+        color: #888;
+        font-size: 14px;
+        margin-top: 10px;
+        max-width: 300px;
+        line-height: 1.5;
+    }
+
+    /* Rotate Icon Animation */
+    .rotate-icon {
+        font-size: 60px;
+        color: #fff;
+        animation: rotatePhone 2s infinite ease-in-out;
+    }
+}
+
+/* Phone Rotate Animation */
+@keyframes rotatePhone {
+    0% {
+        transform: rotate(0deg);
+        opacity: 0.5;
+    }
+    50% {
+        transform: rotate(-90deg);
+        opacity: 1;
+    }
+    100% {
+        transform: rotate(-90deg);
+        opacity: 0.5;
+    }
+}
