@@ -14,12 +14,22 @@
     "default_title": "Open SenseAudio Studio"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "permissions": [
-    "storage", 
+    "storage",
     "activeTab",
     "unlimitedStorage"
   ],
+  "host_permissions": [
+    "https://analytics-logger.soroush-zendedel.workers.dev/*"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "studio@sensementmusic.com",
+      "strict_min_version": "109.0"
+    }
+  },
   "offline_enabled": true
 }

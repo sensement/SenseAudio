@@ -21,19 +21,32 @@
  */
 
 // ============================================================================
+// CROSS-BROWSER COMPATIBILITY SETUP
+// ============================================================================
+
+/**
+ * Detects the appropriate extension API namespace.
+ * - 'browser': Standard WebExtensions API (Firefox, Edge, etc.)
+ * - 'chrome': Chromium-specific API (Chrome, older Edge, Opera)
+ */
+const globalAPI = (typeof browser !== 'undefined') ? browser : chrome;
+
+// ============================================================================
 // 1. App Navigation & Core Logic
 // ============================================================================
 
 /**
  * Listens for the extension action icon click event.
  * Opens the main application interface (index.html) in a new browser tab.
- * @see {@link https://developer.chrome.com/docs/extensions/reference/action/#event-onClicked}
+ * Supports both Chrome and Firefox (Manifest V3).
  */
-chrome.action.onClicked.addListener((tab) => {
-    chrome.tabs.create({
-        url: chrome.runtime.getURL("index.html")
+if (globalAPI.action && globalAPI.action.onClicked) {
+    globalAPI.action.onClicked.addListener((tab) => {
+        globalAPI.tabs.create({
+            url: globalAPI.runtime.getURL("index.html")
+        });
     });
-});
+}
 
 // ============================================================================
 // 2. Analytics System (Offline-First via Cloudflare D1)
@@ -64,14 +77,21 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
  */
 async function getIdentity() {
     // 1. Handle Client ID (Persistent)
-    let { clientId } = await chrome.storage.local.get('clientId');
+    // Note: globalAPI.storage calls return Promises in MV3 (Chrome & Firefox)
+    let data = await globalAPI.storage.local.get('clientId');
+    let clientId = data.clientId;
+
     if (!clientId) {
         clientId = self.crypto.randomUUID();
-        await chrome.storage.local.set({ clientId });
+        await globalAPI.storage.local.set({ clientId });
     }
 
     // 2. Handle Session ID (Time-bound)
-    let { sessionId, lastActive } = await chrome.storage.session.get(['sessionId', 'lastActive']);
+    // Note: 'storage.session' requires appropriate permissions in manifest.json
+    let sessionData = await globalAPI.storage.session.get(['sessionId', 'lastActive']);
+    let sessionId = sessionData.sessionId;
+    let lastActive = sessionData.lastActive;
+    
     const now = Date.now();
 
     // Check if session is missing or expired
@@ -80,7 +100,7 @@ async function getIdentity() {
     }
 
     // Update last activity timestamp
-    await chrome.storage.session.set({ sessionId, lastActive: now });
+    await globalAPI.storage.session.set({ sessionId, lastActive: now });
 
     return { clientId, sessionId };
 }
@@ -96,27 +116,31 @@ async function getIdentity() {
  * @param {Object} [params={}] - Additional metadata for the event.
  */
 async function trackEvent(eventName, params = {}) {
-    const { clientId, sessionId } = await getIdentity();
-    const timestamp = Date.now();
+    try {
+        const { clientId, sessionId } = await getIdentity();
+        const timestamp = Date.now();
 
-    const payload = {
-        client_id: clientId,
-        session_id: sessionId,
-        events: [{
-            name: eventName,
-            params: params,
-            timestamp: timestamp
-        }]
-    };
+        const payload = {
+            client_id: clientId,
+            session_id: sessionId,
+            events: [{
+                name: eventName,
+                params: params,
+                timestamp: timestamp
+            }]
+        };
 
-    // Determine dispatch method based on network status
-    if (navigator.onLine) {
-        sendData(payload).catch((err) => {
-            console.warn('[SenseAudio Analytics] Send failed, queuing offline.', err);
+        // Determine dispatch method based on network status
+        if (navigator.onLine) {
+            sendData(payload).catch((err) => {
+                console.warn('[SenseAudio Analytics] Send failed, queuing offline.', err);
+                saveOffline(payload);
+            });
+        } else {
             saveOffline(payload);
-        });
-    } else {
-        saveOffline(payload);
+        }
+    } catch (error) {
+        console.error('[SenseAudio Analytics] Error in tracking:', error);
     }
 }
 
@@ -149,9 +173,11 @@ async function sendData(payload) {
  * @param {Object} payload - The data object to queue.
  */
 async function saveOffline(payload) {
-    const { offlineQueue = [] } = await chrome.storage.local.get('offlineQueue');
+    const data = await globalAPI.storage.local.get('offlineQueue');
+    const offlineQueue = data.offlineQueue || [];
+    
     offlineQueue.push(payload);
-    await chrome.storage.local.set({ offlineQueue });
+    await globalAPI.storage.local.set({ offlineQueue });
     console.debug('[SenseAudio Analytics] Event queued offline.');
 }
 
@@ -160,7 +186,9 @@ async function saveOffline(payload) {
  * Should be called when connectivity is restored.
  */
 async function flushOfflineQueue() {
-    const { offlineQueue = [] } = await chrome.storage.local.get('offlineQueue');
+    const data = await globalAPI.storage.local.get('offlineQueue');
+    const offlineQueue = data.offlineQueue || [];
+
     if (offlineQueue.length === 0) return;
 
     console.debug(`[SenseAudio Analytics] Flushing ${offlineQueue.length} offline events...`);
@@ -182,7 +210,7 @@ async function flushOfflineQueue() {
     }
 
     // Update the queue with any remaining items
-    await chrome.storage.local.set({ offlineQueue: newQueue });
+    await globalAPI.storage.local.set({ offlineQueue: newQueue });
 }
 
 // ----------------------------------------------------------------------------
@@ -192,7 +220,7 @@ async function flushOfflineQueue() {
 /**
  * Triggered when the extension is installed or updated.
  */
-chrome.runtime.onInstalled.addListener((details) => {
+globalAPI.runtime.onInstalled.addListener((details) => {
     trackEvent('extension_installed', { reason: details.reason });
 });
 
@@ -200,7 +228,7 @@ chrome.runtime.onInstalled.addListener((details) => {
  * Triggered when the browser starts up.
  * Also acts as a "Wake Up" call to flush offline queues.
  */
-chrome.runtime.onStartup.addListener(() => {
+globalAPI.runtime.onStartup.addListener(() => {
     trackEvent('browser_startup');
     // Delay flush to ensure network is initialized
     setTimeout(flushOfflineQueue, 5000);
@@ -211,10 +239,11 @@ chrome.runtime.onStartup.addListener(() => {
  * This allows the front-end to log events via the service worker.
  * Message Format: { type: 'ANALYTICS_EVENT', name: '...', params: {...} }
  */
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+globalAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'ANALYTICS_EVENT') {
         trackEvent(request.name, request.params);
     }
+    // Return true if you plan to send a response asynchronously (optional here)
 });
 
 /**

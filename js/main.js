@@ -35,15 +35,97 @@ import { INSTRUMENTS, getInstrumentSettings } from './InstrumentDefs.js';
 console.log("App Starting (Per-Track Synthesis)...");
 
 // ==========================================
-// ANALYTICS HELPER
+// ANALYTICS HELPER (Universal: Web & Extensions)
 // ==========================================
+
+const ANALYTICS_ENDPOINT = 'https://analytics-logger.soroush-zendedel.workers.dev/';
+
+/**
+ * Manages user identity for the Web version (simulating chrome.storage).
+ * Uses localStorage for persistent Client ID and sessionStorage for ephemeral Session ID.
+ * @returns {Promise<{clientId: string, sessionId: string}>}
+ */
+async function getWebIdentity() {
+    // 1. Client ID (Persistent)
+    let clientId = localStorage.getItem('sa_client_id');
+    if (!clientId) {
+        clientId = self.crypto.randomUUID();
+        localStorage.setItem('sa_client_id', clientId);
+    }
+
+    // 2. Session ID (Ephemeral with Timeout)
+    let sessionId = sessionStorage.getItem('sa_session_id');
+    const lastActive = parseInt(localStorage.getItem('sa_last_active') || '0');
+    const now = Date.now();
+    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+    if (!sessionId || (now - lastActive) > SESSION_TIMEOUT) {
+        sessionId = self.crypto.randomUUID();
+        sessionStorage.setItem('sa_session_id', sessionId);
+    }
+
+    localStorage.setItem('sa_last_active', now.toString());
+    return { clientId, sessionId };
+}
+
+/**
+ * Sends analytics data directly via fetch for the Web version.
+ * Used when extension APIs are unavailable.
+ * @param {string} name - Event name
+ * @param {Object} params - Event parameters
+ */
+async function sendWebAnalytics(name, params) {
+    try {
+        const { clientId, sessionId } = await getWebIdentity();
+        
+        const payload = {
+            client_id: clientId,
+            session_id: sessionId,
+            events: [{
+                name: name,
+                params: params,
+                timestamp: Date.now()
+            }]
+        };
+
+        // Fire-and-forget request to avoid blocking UI
+        fetch(ANALYTICS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(err => console.warn('[Analytics Web] Failed to send:', err));
+
+    } catch (e) {
+        console.error('[Analytics Web] Identity Error:', e);
+    }
+}
+
+/**
+ * Main logging function. Automatically detects the environment:
+ * 1. Firefox Extension (browser API)
+ * 2. Chrome Extension (chrome API)
+ * 3. Standard Web (Fetch API)
+ * * @param {string} name - Event name
+ * @param {Object} params - Event parameters
+ */
 function logEvent(name, params = {}) {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    // Detect Extension API (Firefox uses 'browser', Chrome uses 'chrome')
+    const extensionApi = (typeof browser !== 'undefined') ? browser : ((typeof chrome !== 'undefined') ? chrome : null);
+
+    // 1. Try sending via Extension API
+    if (extensionApi && extensionApi.runtime && extensionApi.runtime.sendMessage) {
         try {
-            chrome.runtime.sendMessage({ type: 'ANALYTICS_EVENT', name: name, params: params });
-        } catch (e) { /* Ignore */ }
-    } else {
-        console.log('[Analytics]', name, params);
+            extensionApi.runtime.sendMessage({ type: 'ANALYTICS_EVENT', name: name, params: params });
+        } catch (e) {
+            // Fallback: If extension context is invalid (e.g., connection lost), use Web API
+            console.warn('[Analytics Extension] Connection issue, using Web fallback...');
+            sendWebAnalytics(name, params);
+        }
+    } 
+    // 2. Fallback to Standard Web API
+    else {
+        sendWebAnalytics(name, params);
+        console.log('[Analytics Web]', name, params); // Keep local log for debugging
     }
 }
 
