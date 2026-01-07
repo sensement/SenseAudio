@@ -34,6 +34,19 @@ import { INSTRUMENTS, getInstrumentSettings } from './InstrumentDefs.js';
 
 console.log("App Starting (Per-Track Synthesis)...");
 
+// ==========================================
+// ANALYTICS HELPER
+// ==========================================
+function logEvent(name, params = {}) {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        try {
+            chrome.runtime.sendMessage({ type: 'ANALYTICS_EVENT', name: name, params: params });
+        } catch (e) { /* Ignore */ }
+    } else {
+        console.log('[Analytics]', name, params);
+    }
+}
+
 // --- Initialization ---
 const brain = new MusicBrain();
 const state = new State();
@@ -134,6 +147,13 @@ function startPlayback() {
 
     updateMixer();
     state.isPlaying = true;
+
+    logEvent('playback_start', { 
+        bpm: state.bpm, 
+        track_count: state.tracks.length,
+        scale: `${state.rootKey} ${state.scaleName}`
+    });
+
     playBtn.innerText = "■ Stop";
     playBtn.style.color = "#ff6b6b";
 
@@ -156,6 +176,7 @@ function startPlayback() {
  * Stops playback and resets audio state.
  */
 function stopPlayback() {
+    logEvent('playback_stop', { duration_played: audio.ctx.currentTime - audioStartTime });
     state.isPlaying = false;
     playBtn.innerText = "▶ Play";
     playBtn.style.color = "";
@@ -505,6 +526,9 @@ document.getElementById('doGenerateBtn').addEventListener('click', () => {
     const lenBars = parseInt(document.getElementById('genLength').value);
     const complexity = document.getElementById('genComplexity').value;
     const algo = genAlgorithmSelect.value;
+
+    logEvent('ai_generate_melody', { algo: algo, complexity: complexity, bars: lenBars });
+
     if (startBar < 0 || lenBars <= 0) return;
 
     const startStep = startBar * state.stepsPerBar;
@@ -548,6 +572,12 @@ document.getElementById('doGenerateBtn').addEventListener('click', () => {
 if (applyStructureBtn) {
     applyStructureBtn.addEventListener('click', () => {
         console.log("🚀 Generating Song Structure...");
+
+        logEvent('ai_generate_song', { 
+            genre: wizGenre.value, 
+            template: wizTemplate.value,
+            vibe: wizVibe.value 
+        });
 
         // 1. Get Values from Wizard Elements
         const templateKey = wizTemplate.value;
@@ -689,7 +719,11 @@ fileInput.addEventListener('change', (e) => {
     reader.readAsText(file);
     e.target.value = '';
 });
-document.getElementById('menuExportMidi').addEventListener('click', () => exporter.exportMidi());
+// document.getElementById('menuExportMidi').addEventListener('click', () => exporter.exportMidi());
+document.getElementById('menuExportMidi').addEventListener('click', () => {
+    logEvent('export_song_midi');
+    exporter.exportMidi();
+});
 document.getElementById('menuImportMidi').addEventListener('click', () => midiInput.click());
 midiInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -757,7 +791,10 @@ window.addEventListener('load', () => {
     else renderer.resize();
     renderTrackList();
     setTimeout(scrollToMiddle, 100);
+
+    checkFirstRun();
 });
+
 
 function updateGridLogic() {
     const gridRes = parseInt(rhythmSelect.value);
@@ -924,6 +961,8 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
         // Track is created and set as active
         state.addTrack(type, preset);
 
+        logEvent('track_add', { type: type, preset: preset, total: state.tracks.length });
+        
         renderTrackList();
         renderer.draw();
         addTrackDropdown.style.display = 'none';
@@ -986,6 +1025,8 @@ if (doGenerateDrumsBtn) {
         const genre = document.getElementById('drumGenre').value;
         const humanizeAmt = parseInt(document.getElementById('drumHumanize').value) || 0;
 
+        logEvent('ai_generate_drums', { genre: genre });
+        
         // Clear previous notes
         track.notes = [];
 
@@ -1281,6 +1322,7 @@ const exportWavBtn = document.getElementById('menuExportWav');
 
 if (exportWavBtn) {
     exportWavBtn.addEventListener('click', async () => {
+        logEvent('export_song_wav', { bpm: state.bpm, bars: state.totalBars });
         const originalText = exportWavBtn.innerText;
         exportWavBtn.innerText = "⏳ Rendering...";
         exportWavBtn.disabled = true;
@@ -1676,6 +1718,8 @@ ctxExportWav.addEventListener('click', () => {
     if (selectedTrackIndexForContext === -1) return;
     contextMenu.style.display = 'none';
 
+    logEvent('export_track_wav', { track_index: selectedTrackIndexForContext });
+
     document.body.style.cursor = 'wait';
 
     exporter.exportTrackWav(selectedTrackIndexForContext)
@@ -1688,6 +1732,7 @@ ctxExportWav.addEventListener('click', () => {
 ctxExportMidi.addEventListener('click', () => {
     if (selectedTrackIndexForContext === -1) return;
     contextMenu.style.display = 'none';
+    logEvent('export_track_wav', { track_index: selectedTrackIndexForContext });
     exporter.exportTrackMidi(selectedTrackIndexForContext);
 });
 
@@ -1732,4 +1777,93 @@ function updateMixer() {
             audio.setTrackVolume(track.id, finalVol);
         }
     });
+}
+
+// ==========================================
+// PRIVACY & ANALYTICS NOTICE LOGIC (Safe Version)
+// ==========================================
+
+async function checkFirstRun() {
+    let hasSeenPrivacy = false;
+
+    // 1. Try to get from Chrome Extension Storage
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        const result = await chrome.storage.local.get('hasSeenPrivacy');
+        hasSeenPrivacy = result.hasSeenPrivacy;
+    } 
+    // 2. Fallback to standard Web LocalStorage
+    else {
+        hasSeenPrivacy = localStorage.getItem('hasSeenPrivacy') === 'true';
+    }
+    
+    if (!hasSeenPrivacy) {
+        showPrivacyNotice(); 
+    }
+}
+
+function showPrivacyNotice() {
+    const notice = document.createElement('div');
+    
+    // Modern "Glassmorphism" style
+    notice.style.cssText = `
+        position: fixed; 
+        bottom: 24px; 
+        right: 24px; 
+        background: rgba(30, 41, 59, 0.95); 
+        backdrop-filter: blur(8px);
+        color: #f1f5f9; 
+        padding: 20px; 
+        border-radius: 16px; 
+        z-index: 99999; 
+        border: 1px solid rgba(45, 212, 191, 0.3); 
+        font-size: 13px; 
+        max-width: 300px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        font-family: system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+    `;
+
+    notice.innerHTML = `
+        <div style="margin-bottom: 12px; font-weight: 600; color: #2dd4bf; font-size: 14px;">
+            Privacy & Analytics
+        </div>
+        <div style="margin-bottom: 16px; color: #94a3b8;">
+            We collect anonymous usage data to improve our AI and audio engine. No personal info is stored.
+            <a href="/privacy.html" target="_blank" style="color: #2dd4bf; text-decoration: underline; font-weight: 500;">
+                Read Policy
+            </a>
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+            <button id="closePrivacy" style="
+                background: #2dd4bf; 
+                color: #0f172a; 
+                border: none; 
+                padding: 8px 16px; 
+                cursor: pointer; 
+                border-radius: 8px; 
+                font-weight: 700;
+                font-size: 12px;
+                transition: transform 0.2s ease;
+            ">Got it!</button>
+        </div>
+    `;
+
+    document.body.appendChild(notice);
+
+    const closeBtn = document.getElementById('closePrivacy');
+    closeBtn.onclick = () => {
+        // Save to Extension Storage if available
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ hasSeenPrivacy: true });
+        } 
+        // Otherwise save to standard LocalStorage
+        else {
+            localStorage.setItem('hasSeenPrivacy', 'true');
+        }
+
+        notice.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        notice.style.opacity = '0';
+        notice.style.transform = 'translateY(20px)';
+        setTimeout(() => notice.remove(), 400);
+    };
 }

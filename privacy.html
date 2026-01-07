@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - SenseAudio</title>
+    <style>
+        /* Base Styles - No external dependencies */
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.95);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --teal-accent: #2dd4bf;
+            --rose-accent: #fb7185;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --item-bg: rgba(15, 23, 42, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100-vh;
+            padding: 3rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+        }
+
+        /* Main Card */
+        main {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        section:last-child {
+            margin-bottom: 0;
+        }
+
+        .intro-text {
+            font-size: 1.125rem;
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+        }
+
+        .highlight-teal {
+            color: var(--teal-accent);
+            font-weight: 600;
+        }
+
+        /* Section Titles with Numbers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .number-badge {
+            width: 2rem;
+            height: 2rem;
+            background-color: rgba(45, 212, 191, 0.15);
+            color: var(--teal-accent);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Lists */
+        ul {
+            list-style: none;
+        }
+
+        .negative-list li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            color: #cbd5e1;
+        }
+
+        .icon-no {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: var(--rose-accent);
+            margin-right: 0.5rem;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+
+        .grid-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .grid-item {
+            background-color: var(--item-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .dot-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            color: #cbd5e1;
+        }
+
+        .dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: var(--teal-accent);
+            border-radius: 50%;
+            margin-right: 0.75rem;
+        }
+
+        /* Storage Box */
+        .storage-box {
+            background-color: rgba(45, 212, 191, 0.05);
+            border: 1px solid rgba(45, 212, 191, 0.2);
+            padding: 1.5rem;
+            border-radius: 1rem;
+        }
+
+        .storage-box p {
+            color: #cbd5e1;
+        }
+
+        .text-bold-white {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .text-uppercase-teal {
+            color: var(--teal-accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding: 1.5rem;
+            }
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header>
+            <h1>Privacy Policy for SenseAudio</h1>
+            <p>Last Updated: January 2026</p>
+        </header>
+
+        <!-- Main Content Section -->
+        <main>
+            <section>
+                <p class="intro-text">
+                    At <span class="highlight-teal">Sensement Music</span>, we value your creativity and privacy. This policy explains how we handle data within the SenseAudio extension and web application.
+                </p>
+            </section>
+
+            <!-- 1. Data Collection -->
+            <section>
+                <div class="section-header">
+                    <div class="number-badge">1</div>
+                    <h2>Data We Collect</h2>
+                </div>
+                <p style="margin-bottom: 1rem;">
+                    SenseAudio is designed to be a "Privacy-First" tool. We do <strong style="color: var(--rose-accent);">NOT</strong> collect:
+                </p>
+                <ul class="negative-list">
+                    <li>
+                        <svg class="icon-no" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Your Name, Email, or IP Address.
+                    </li>
+                    <li>
+                        <svg class="icon-no" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Your location or personal identity.
+                    </li>
+                    <li>
+                        <svg class="icon-no" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        The content of your musical projects (unless explicitly shared/saved to cloud in future updates).
+                    </li>
+                </ul>
+                
+                <p style="margin: 1.5rem 0 1rem 0;">
+                    We <span class="highlight-teal">DO</span> collect anonymous usage statistics, such as:
+                </p>
+                <div class="grid-list">
+                    <div class="grid-item">App installation and startup.</div>
+                    <div class="grid-item">Musical settings used (BPM, Key, Scale type).</div>
+                    <div class="grid-item">Usage of AI generation features (Genre, Complexity).</div>
+                    <div class="grid-item">Export actions (WAV/MIDI/JSON).</div>
+                </div>
+            </section>
+
+            <!-- 2. Usage -->
+            <section>
+                <div class="section-header">
+                    <div class="number-badge">2</div>
+                    <h2>Why We Collect Data</h2>
+                </div>
+                <p style="margin-bottom: 1rem; color: #cbd5e1;">We use this anonymous information solely to:</p>
+                <ul class="dot-list">
+                    <li><span class="dot"></span>Improve the "MusicBrain" AI engine.</li>
+                    <li><span class="dot"></span>Understand which musical genres and features are most popular.</li>
+                    <li><span class="dot"></span>Fix technical bugs and optimize the Audio Engine performance.</li>
+                </ul>
+            </section>
+
+            <!-- 3. Storage -->
+            <section>
+                <div class="section-header">
+                    <div class="number-badge">3</div>
+                    <h2>Data Storage</h2>
+                </div>
+                <div class="storage-box">
+                    <p>
+                        All data is stored securely using <span class="text-bold-white">Cloudflare D1</span> infrastructure. This data is private to Sensement Music and is <span class="text-uppercase-teal">never sold</span> to third parties.
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer Section -->
+        <footer>
+            <p>&copy; 2026 Sensement Music. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

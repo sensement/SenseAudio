@@ -18,6 +18,7 @@
   },
   "permissions": [
     "storage", 
+    "activeTab",
     "unlimitedStorage"
   ],
   "offline_enabled": true
