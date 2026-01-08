@@ -30,34 +30,33 @@ import MidiParser from './MidiParser.js';
 import History from './History.js';
 import CircleOfFifths from './CircleOfFifths.js';
 import ChordCalculator from './ChordCalculator.js';
+import CloudClient from './CloudClient.js';
 import { INSTRUMENTS, getInstrumentSettings } from './InstrumentDefs.js';
 
-console.log("App Starting (Per-Track Synthesis)...");
+console.log("App Starting (Cloud & Analytics Integrated)...");
 
 // ==========================================
 // ANALYTICS HELPER (Universal: Web & Extensions)
 // ==========================================
 
-const ANALYTICS_ENDPOINT = 'https://analytics-logger.soroush-zendedel.workers.dev/';
+// [OPTIMIZED] Use relative path for internal API
+// This automatically adapts to localhost or production domain
+const ANALYTICS_ENDPOINT = '/api/analytics';
 
 /**
- * Manages user identity for the Web version (simulating chrome.storage).
- * Uses localStorage for persistent Client ID and sessionStorage for ephemeral Session ID.
- * @returns {Promise<{clientId: string, sessionId: string}>}
+ * Manages user identity for the Web version.
  */
 async function getWebIdentity() {
-    // 1. Client ID (Persistent)
     let clientId = localStorage.getItem('sa_client_id');
     if (!clientId) {
         clientId = self.crypto.randomUUID();
         localStorage.setItem('sa_client_id', clientId);
     }
 
-    // 2. Session ID (Ephemeral with Timeout)
     let sessionId = sessionStorage.getItem('sa_session_id');
     const lastActive = parseInt(localStorage.getItem('sa_last_active') || '0');
     const now = Date.now();
-    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    const SESSION_TIMEOUT = 30 * 60 * 1000; 
 
     if (!sessionId || (now - lastActive) > SESSION_TIMEOUT) {
         sessionId = self.crypto.randomUUID();
@@ -69,17 +68,18 @@ async function getWebIdentity() {
 }
 
 /**
- * Sends analytics data directly via fetch for the Web version.
- * Used when extension APIs are unavailable.
- * @param {string} name - Event name
- * @param {Object} params - Event parameters
+ * Sends analytics data via Fetch API.
  */
 async function sendWebAnalytics(name, params) {
     try {
         const { clientId, sessionId } = await getWebIdentity();
-        
+
+        let activeClientId = clientId;
+        if (typeof state !== 'undefined' && state.user && state.user.id) {
+            activeClientId = state.user.id;
+        }
         const payload = {
-            client_id: clientId,
+            client_id: activeClientId,
             session_id: sessionId,
             events: [{
                 name: name,
@@ -88,7 +88,7 @@ async function sendWebAnalytics(name, params) {
             }]
         };
 
-        // Fire-and-forget request to avoid blocking UI
+        // Fire-and-forget
         fetch(ANALYTICS_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -101,33 +101,26 @@ async function sendWebAnalytics(name, params) {
 }
 
 /**
- * Main logging function. Automatically detects the environment:
- * 1. Firefox Extension (browser API)
- * 2. Chrome Extension (chrome API)
- * 3. Standard Web (Fetch API)
- * * @param {string} name - Event name
- * @param {Object} params - Event parameters
+ * Main logging function.
  */
 function logEvent(name, params = {}) {
-    // Detect Extension API (Firefox uses 'browser', Chrome uses 'chrome')
+    // Check for Extension Environment
     const extensionApi = (typeof browser !== 'undefined') ? browser : ((typeof chrome !== 'undefined') ? chrome : null);
 
-    // 1. Try sending via Extension API
     if (extensionApi && extensionApi.runtime && extensionApi.runtime.sendMessage) {
         try {
             extensionApi.runtime.sendMessage({ type: 'ANALYTICS_EVENT', name: name, params: params });
         } catch (e) {
-            // Fallback: If extension context is invalid (e.g., connection lost), use Web API
             console.warn('[Analytics Extension] Connection issue, using Web fallback...');
             sendWebAnalytics(name, params);
         }
-    } 
-    // 2. Fallback to Standard Web API
-    else {
+    } else {
+        // Standard Web Environment
         sendWebAnalytics(name, params);
-        console.log('[Analytics Web]', name, params); // Keep local log for debugging
+        // console.log('[Analytics]', name, params); // Uncomment for debug
     }
 }
+
 
 // --- Initialization ---
 const brain = new MusicBrain();
@@ -138,6 +131,7 @@ const history = new History(state, renderer);
 const interaction = new Interaction(renderer, audio, history);
 const exporter = new Exporter(state, audio);
 const midiParser = new MidiParser();
+const cloudClient = new CloudClient();
 
 /**
  * Unlocks the audio context on user interaction.
@@ -187,6 +181,15 @@ const synthAttack = document.getElementById('synthAttack');
 const synthDecay = document.getElementById('synthDecay');
 const synthSustain = document.getElementById('synthSustain');
 const synthRelease = document.getElementById('synthRelease');
+
+// --- DOM Elements: Cloud Controls ---
+const menuSaveCloud = document.getElementById('menuSaveCloud');
+const menuOpenCloud = document.getElementById('menuOpenCloud');
+const overlayCloud = document.getElementById('overlay-cloud');
+const closeCloudBtn = document.getElementById('close-cloud-btn');
+const cloudList = document.getElementById('cloud-project-list');
+const cloudLoading = document.getElementById('cloud-loading');
+
 
 // --- DOM Elements: Context Menu ---
 const contextMenu = document.getElementById('trackContextMenu');
@@ -875,6 +878,8 @@ window.addEventListener('load', () => {
     setTimeout(scrollToMiddle, 100);
 
     checkFirstRun();
+    // [UPDATED] Initialize Auth when app loads
+    initAuth();
 });
 
 
@@ -1948,4 +1953,214 @@ function showPrivacyNotice() {
         notice.style.transform = 'translateY(20px)';
         setTimeout(() => notice.remove(), 400);
     };
+}
+
+
+// ==========================================
+// CLOUD STORAGE LOGIC (Cloudflare Pages)
+// ==========================================
+
+if (menuSaveCloud) {
+    menuSaveCloud.addEventListener('click', async () => {
+        // 1. Check if user is authenticated via Clerk
+        if (!state.user) {
+            alert("Please sign in to save projects to the cloud.");
+            if (window.Clerk) window.Clerk.openSignIn();
+            return;
+        }
+
+        // 2. Prompt for project name
+        const defaultName = state.currentProjectName || "My Awesome Song";
+        const name = prompt("Enter project name:", defaultName);
+        if (!name) return;
+
+        // UI Feedback: Change button text to indicate loading
+        const originalText = menuSaveCloud.innerText;
+        menuSaveCloud.innerText = "☁️ Saving...";
+        
+        try {
+            // 3. Serialize current state to JSON
+            const data = state.getData();
+
+            // 4. Send save request to Cloudflare Worker
+            const result = await cloudClient.saveProject(data, state.user, name);
+            
+            // 5. Update local state with the new cloud ID to allow future updates
+            state.cloudId = result.id; 
+            state.currentProjectName = name; 
+            
+            alert("✅ Project saved successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ Save failed: " + err.message);
+        } finally {
+            // Restore button text
+            menuSaveCloud.innerText = originalText;
+        }
+    });
+}
+
+if (menuOpenCloud) {
+    menuOpenCloud.addEventListener('click', async () => {
+        // 1. Auth Check
+        if (!state.user) {
+            alert("Please sign in to access cloud projects.");
+            if (window.Clerk) window.Clerk.openSignIn();
+            return;
+        }
+
+        // 2. Open Modal & Reset List
+        overlayCloud.classList.remove('hidden');
+        cloudLoading.style.display = 'block';
+        cloudList.innerHTML = '';
+
+        try {
+            // 3. Fetch project list from Cloudflare
+            const projects = await cloudClient.listProjects(state.user);
+            cloudLoading.style.display = 'none';
+
+            if (projects.length === 0) {
+                cloudList.innerHTML = '<div style="color:#aaa; padding:15px; text-align:center;">No projects found.</div>';
+                return;
+            }
+
+            // 4. Render project list items
+            projects.forEach(proj => {
+                const div = document.createElement('div');
+                div.className = 'cloud-project-item';
+                div.style.cssText = `
+                    background: #2d3436; 
+                    padding: 12px; 
+                    border-radius: 6px; 
+                    cursor: pointer; 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center;
+                    border: 1px solid #444;
+                    transition: 0.2s;
+                    margin-bottom: 5px;
+                `;
+                
+                // Hover effects for better UX
+                div.onmouseover = () => div.style.borderColor = '#00d2d3';
+                div.onmouseout = () => div.style.borderColor = '#444';
+                
+                const dateStr = new Date(proj.timestamp).toLocaleDateString();
+                
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold; color:#fff;">${proj.name}</div>
+                        <div style="font-size:11px; color:#888;">${dateStr}</div>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="load-btn" style="background:var(--primary); color:#000; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Load</button>
+                        <button class="del-btn" style="background:#ff6b6b; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">🗑️</button>
+                    </div>
+                `;
+
+                // --- Load Logic ---
+                div.querySelector('.load-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(!confirm("Load this project? Unsaved changes will be lost.")) return;
+                    
+                    div.style.opacity = '0.5';
+                    div.innerText = "Loading...";
+
+                    try {
+                        // Fetch full project JSON by ID
+                        const fullProject = await cloudClient.loadProject(proj.id, state.user);
+                        
+                        // Restore state
+                        state.loadProject(fullProject.data);
+                        state.cloudId = proj.id; // Ensure updates go to the same ID
+                        
+                        // Refresh UI components
+                        renderTrackList();
+                        if (renderer.forceResize) renderer.forceResize();
+                        else renderer.resize();
+                        
+                        overlayCloud.classList.add('hidden');
+                    } catch(err) {
+                        alert("Error loading project.");
+                        div.style.opacity = '1';
+                    }
+                });
+
+                // --- Delete Logic ---
+                div.querySelector('.del-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(!confirm(`Delete "${proj.name}"? This cannot be undone.`)) return;
+                    
+                    try {
+                        await cloudClient.deleteProject(proj.id, state.user);
+                        div.remove();
+                        // Update empty state if needed
+                        if(cloudList.children.length === 0) {
+                            cloudList.innerHTML = '<div style="color:#aaa; padding:15px; text-align:center;">No projects found.</div>';
+                        }
+                    } catch(err) {
+                        alert("Error deleting project.");
+                    }
+                });
+
+                cloudList.appendChild(div);
+            });
+
+        } catch (err) {
+            cloudLoading.innerText = "Error fetching projects.";
+            console.error(err);
+        }
+    });
+}
+
+// Close Cloud Modal on button click
+if (closeCloudBtn) {
+    closeCloudBtn.addEventListener('click', () => overlayCloud.classList.add('hidden'));
+}
+
+
+// ==========================================
+// USER AUTHENTICATION LOGIC (Clerk)
+// ==========================================
+
+async function initAuth() {
+    if (!window.Clerk) {
+        console.warn('Clerk script not loaded (Offline mode?)');
+        return;
+    }
+
+    try {
+        await window.Clerk.load();
+
+        // 1. Check if already logged in
+        if (window.Clerk.user) {
+            state.user = {
+                id: window.Clerk.user.id,
+                firstName: window.Clerk.user.firstName,
+                email: window.Clerk.user.primaryEmailAddress?.emailAddress
+            };
+            console.log("✅ Logged in as:", state.user.firstName);
+            
+            // Optional: Send Login Event
+            // logEvent('user_login', { method: 'clerk' });
+        }
+
+        // 2. Listen for auth changes (Sign in / Sign out)
+        window.Clerk.addListener((payload) => {
+            if (payload.user) {
+                // User signed in
+                state.user = {
+                    id: payload.user.id,
+                    firstName: payload.user.firstName,
+                    email: payload.user.primaryEmailAddress?.emailAddress
+                };
+            } else {
+                // User signed out
+                state.user = null;
+            }
+        });
+
+    } catch (err) {
+        console.error("Auth Error:", err);
+    }
 }

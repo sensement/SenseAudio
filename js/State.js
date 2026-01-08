@@ -48,7 +48,8 @@ export default class State {
         this.isPlaying = false;
         this.currentPlayX = 0;
         this._playbackNotes = [];
-
+        this.user= null, // User State for Auth
+        this.cloudId = null; // To track cloud save ID
         this.sectionTypes = {
             'INTRO':      { label: 'Intro', color: '#3498db' },
             'VERSE':      { label: 'Verse', color: '#2ecc71' },
@@ -322,6 +323,7 @@ export default class State {
      */
     getData() {
         return {
+            cloudId: this.cloudId,
             tracks: this.tracks,
             bpm: this.bpm,
             stepsPerBar: this.stepsPerBar,
@@ -339,6 +341,7 @@ export default class State {
      */
     loadProject(data) {
         if (!data) return;
+        this.cloudId = data.cloudId || null;
         this.bpm = data.bpm;
         this.rootKey = data.rootKey;
         this.scaleName = data.scaleName;

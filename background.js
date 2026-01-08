@@ -21,8 +21,22 @@
  */
 
 // ============================================================================
-// CROSS-BROWSER COMPATIBILITY SETUP
+// CONFIGURATION
 // ============================================================================
+
+/**
+ * The main production URL of the web application.
+ * The analytics endpoint is hosted via Cloudflare Pages Functions at /api/analytics.
+ * This approach avoids hardcoding Worker URLs and keeps the API consistent with the domain.
+ */
+const APP_DOMAIN = 'https://studio.sensementmusic.com'; // <--- CHANGE THIS TO YOUR REAL DOMAIN
+const ANALYTICS_ENDPOINT = `${APP_DOMAIN}/api/analytics`;
+
+/**
+ * Session timeout threshold in milliseconds.
+ * 30 minutes of inactivity will result in a new session ID.
+ */
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
  * Detects the appropriate extension API namespace.
@@ -53,23 +67,6 @@ if (globalAPI.action && globalAPI.action.onClicked) {
 // ============================================================================
 
 /**
- * CONFIGURATION:
- * The endpoint for the Cloudflare Worker that handles analytics logging.
- * Acts as a bridge to the D1 database.
- */
-const WORKER_URL = 'https://analytics-logger.soroush-zendedel.workers.dev/';
-
-/**
- * Session timeout threshold in milliseconds.
- * 30 minutes of inactivity will result in a new session ID.
- */
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
-
-// ----------------------------------------------------------------------------
-// User Identity & Session Management
-// ----------------------------------------------------------------------------
-
-/**
  * Retrieves or generates unique identifiers for the user and the current session.
  * - Client ID: Persistent ID stored in local storage (simulates a unique device/user).
  * - Session ID: Ephemeral ID stored in session storage, resets after inactivity.
@@ -77,7 +74,6 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
  */
 async function getIdentity() {
     // 1. Handle Client ID (Persistent)
-    // Note: globalAPI.storage calls return Promises in MV3 (Chrome & Firefox)
     let data = await globalAPI.storage.local.get('clientId');
     let clientId = data.clientId;
 
@@ -104,10 +100,6 @@ async function getIdentity() {
 
     return { clientId, sessionId };
 }
-
-// ----------------------------------------------------------------------------
-// Tracking Core Logic
-// ----------------------------------------------------------------------------
 
 /**
  * Main entry point to track an event.
@@ -149,12 +141,13 @@ async function trackEvent(eventName, params = {}) {
 // ----------------------------------------------------------------------------
 
 /**
- * Sends the event payload to the Cloudflare Worker.
+ * Sends the event payload to the Cloudflare Functions Endpoint.
  * @param {Object} payload - The data object containing client info and events.
  * @returns {Promise<void>}
  */
 async function sendData(payload) {
-    const response = await fetch(WORKER_URL, {
+    // Uses the dynamic ANALYTICS_ENDPOINT derived from APP_DOMAIN
+    const response = await fetch(ANALYTICS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -198,7 +191,7 @@ async function flushOfflineQueue() {
     // Process queue items
     for (const item of offlineQueue) {
         try {
-            await fetch(WORKER_URL, {
+            await fetch(ANALYTICS_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(item)
