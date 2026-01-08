@@ -30,9 +30,10 @@ import MidiParser from './MidiParser.js';
 import History from './History.js';
 import CircleOfFifths from './CircleOfFifths.js';
 import ChordCalculator from './ChordCalculator.js';
+import CloudClient from './CloudClient.js';
 import { INSTRUMENTS, getInstrumentSettings } from './InstrumentDefs.js';
 
-console.log("App Starting (Per-Track Synthesis)...");
+console.log("App Starting (Cloud Enabled)...");
 
 // ==========================================
 // ANALYTICS HELPER (Universal: Web & Extensions)
@@ -77,9 +78,14 @@ async function getWebIdentity() {
 async function sendWebAnalytics(name, params) {
     try {
         const { clientId, sessionId } = await getWebIdentity();
-        
+
+        // [UPDATED] Use Real User ID if logged in via Clerk
+        let activeClientId = clientId;
+        if (typeof state !== 'undefined' && state.user && state.user.id) {
+            activeClientId = state.user.id;
+        }
         const payload = {
-            client_id: clientId,
+            client_id: activeClientId,
             session_id: sessionId,
             events: [{
                 name: name,
@@ -138,6 +144,7 @@ const history = new History(state, renderer);
 const interaction = new Interaction(renderer, audio, history);
 const exporter = new Exporter(state, audio);
 const midiParser = new MidiParser();
+const cloudClient = new CloudClient();
 
 /**
  * Unlocks the audio context on user interaction.
@@ -187,6 +194,15 @@ const synthAttack = document.getElementById('synthAttack');
 const synthDecay = document.getElementById('synthDecay');
 const synthSustain = document.getElementById('synthSustain');
 const synthRelease = document.getElementById('synthRelease');
+
+// --- DOM Elements: Cloud Controls ---
+const menuSaveCloud = document.getElementById('menuSaveCloud');
+const menuOpenCloud = document.getElementById('menuOpenCloud');
+const overlayCloud = document.getElementById('overlay-cloud');
+const closeCloudBtn = document.getElementById('close-cloud-btn');
+const cloudList = document.getElementById('cloud-project-list');
+const cloudLoading = document.getElementById('cloud-loading');
+
 
 // --- DOM Elements: Context Menu ---
 const contextMenu = document.getElementById('trackContextMenu');
@@ -875,6 +891,8 @@ window.addEventListener('load', () => {
     setTimeout(scrollToMiddle, 100);
 
     checkFirstRun();
+    // [UPDATED] Initialize Auth when app loads
+    initAuth();
 });
 
 
@@ -1948,4 +1966,214 @@ function showPrivacyNotice() {
         notice.style.transform = 'translateY(20px)';
         setTimeout(() => notice.remove(), 400);
     };
+}
+
+
+// ==========================================
+// CLOUD STORAGE LOGIC (Cloudflare Pages)
+// ==========================================
+
+if (menuSaveCloud) {
+    menuSaveCloud.addEventListener('click', async () => {
+        // 1. Check if user is authenticated via Clerk
+        if (!state.user) {
+            alert("Please sign in to save projects to the cloud.");
+            if (window.Clerk) window.Clerk.openSignIn();
+            return;
+        }
+
+        // 2. Prompt for project name
+        const defaultName = state.currentProjectName || "My Awesome Song";
+        const name = prompt("Enter project name:", defaultName);
+        if (!name) return;
+
+        // UI Feedback: Change button text to indicate loading
+        const originalText = menuSaveCloud.innerText;
+        menuSaveCloud.innerText = "☁️ Saving...";
+        
+        try {
+            // 3. Serialize current state to JSON
+            const data = state.getData();
+
+            // 4. Send save request to Cloudflare Worker
+            const result = await cloudClient.saveProject(data, state.user, name);
+            
+            // 5. Update local state with the new cloud ID to allow future updates
+            state.cloudId = result.id; 
+            state.currentProjectName = name; 
+            
+            alert("✅ Project saved successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ Save failed: " + err.message);
+        } finally {
+            // Restore button text
+            menuSaveCloud.innerText = originalText;
+        }
+    });
+}
+
+if (menuOpenCloud) {
+    menuOpenCloud.addEventListener('click', async () => {
+        // 1. Auth Check
+        if (!state.user) {
+            alert("Please sign in to access cloud projects.");
+            if (window.Clerk) window.Clerk.openSignIn();
+            return;
+        }
+
+        // 2. Open Modal & Reset List
+        overlayCloud.classList.remove('hidden');
+        cloudLoading.style.display = 'block';
+        cloudList.innerHTML = '';
+
+        try {
+            // 3. Fetch project list from Cloudflare
+            const projects = await cloudClient.listProjects(state.user);
+            cloudLoading.style.display = 'none';
+
+            if (projects.length === 0) {
+                cloudList.innerHTML = '<div style="color:#aaa; padding:15px; text-align:center;">No projects found.</div>';
+                return;
+            }
+
+            // 4. Render project list items
+            projects.forEach(proj => {
+                const div = document.createElement('div');
+                div.className = 'cloud-project-item';
+                div.style.cssText = `
+                    background: #2d3436; 
+                    padding: 12px; 
+                    border-radius: 6px; 
+                    cursor: pointer; 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center;
+                    border: 1px solid #444;
+                    transition: 0.2s;
+                    margin-bottom: 5px;
+                `;
+                
+                // Hover effects for better UX
+                div.onmouseover = () => div.style.borderColor = '#00d2d3';
+                div.onmouseout = () => div.style.borderColor = '#444';
+                
+                const dateStr = new Date(proj.timestamp).toLocaleDateString();
+                
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold; color:#fff;">${proj.name}</div>
+                        <div style="font-size:11px; color:#888;">${dateStr}</div>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="load-btn" style="background:var(--primary); color:#000; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Load</button>
+                        <button class="del-btn" style="background:#ff6b6b; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">🗑️</button>
+                    </div>
+                `;
+
+                // --- Load Logic ---
+                div.querySelector('.load-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(!confirm("Load this project? Unsaved changes will be lost.")) return;
+                    
+                    div.style.opacity = '0.5';
+                    div.innerText = "Loading...";
+
+                    try {
+                        // Fetch full project JSON by ID
+                        const fullProject = await cloudClient.loadProject(proj.id, state.user);
+                        
+                        // Restore state
+                        state.loadProject(fullProject.data);
+                        state.cloudId = proj.id; // Ensure updates go to the same ID
+                        
+                        // Refresh UI components
+                        renderTrackList();
+                        if (renderer.forceResize) renderer.forceResize();
+                        else renderer.resize();
+                        
+                        overlayCloud.classList.add('hidden');
+                    } catch(err) {
+                        alert("Error loading project.");
+                        div.style.opacity = '1';
+                    }
+                });
+
+                // --- Delete Logic ---
+                div.querySelector('.del-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(!confirm(`Delete "${proj.name}"? This cannot be undone.`)) return;
+                    
+                    try {
+                        await cloudClient.deleteProject(proj.id, state.user);
+                        div.remove();
+                        // Update empty state if needed
+                        if(cloudList.children.length === 0) {
+                            cloudList.innerHTML = '<div style="color:#aaa; padding:15px; text-align:center;">No projects found.</div>';
+                        }
+                    } catch(err) {
+                        alert("Error deleting project.");
+                    }
+                });
+
+                cloudList.appendChild(div);
+            });
+
+        } catch (err) {
+            cloudLoading.innerText = "Error fetching projects.";
+            console.error(err);
+        }
+    });
+}
+
+// Close Cloud Modal on button click
+if (closeCloudBtn) {
+    closeCloudBtn.addEventListener('click', () => overlayCloud.classList.add('hidden'));
+}
+
+
+// ==========================================
+// USER AUTHENTICATION LOGIC (Clerk)
+// ==========================================
+
+async function initAuth() {
+    if (!window.Clerk) {
+        console.warn('Clerk script not loaded (Offline mode?)');
+        return;
+    }
+
+    try {
+        await window.Clerk.load();
+
+        // 1. Check if already logged in
+        if (window.Clerk.user) {
+            state.user = {
+                id: window.Clerk.user.id,
+                firstName: window.Clerk.user.firstName,
+                email: window.Clerk.user.primaryEmailAddress?.emailAddress
+            };
+            console.log("✅ Logged in as:", state.user.firstName);
+            
+            // Optional: Send Login Event
+            // logEvent('user_login', { method: 'clerk' });
+        }
+
+        // 2. Listen for auth changes (Sign in / Sign out)
+        window.Clerk.addListener((payload) => {
+            if (payload.user) {
+                // User signed in
+                state.user = {
+                    id: payload.user.id,
+                    firstName: payload.user.firstName,
+                    email: payload.user.primaryEmailAddress?.emailAddress
+                };
+            } else {
+                // User signed out
+                state.user = null;
+            }
+        });
+
+    } catch (err) {
+        console.error("Auth Error:", err);
+    }
 }
