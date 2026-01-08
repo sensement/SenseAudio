@@ -22,10 +22,17 @@ export async function onRequestPost(context) {
   const userAgent = request.headers.get('User-Agent') || 'Unknown';
 
   // Check Origin
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  // 1. Check exact matches from the list
+  let isAllowed = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+
+  // 2. Check for Cloudflare Pages Previews (Dynamic Subdomains)
+  // This allows URLs like: https://76247b7b.senseaudio.pages.dev
+  if (!isAllowed && origin.endsWith('.pages.dev') && origin.includes('senseaudio')) {
+      isAllowed = true;
+  }
   
   if (!isAllowed) {
-    return new Response(JSON.stringify({ error: 'Forbidden: Unauthorized Origin' }), {
+    return new Response(JSON.stringify({ error: `Forbidden: Unauthorized Origin (${origin})` }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
