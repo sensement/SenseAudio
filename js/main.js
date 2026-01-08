@@ -33,32 +33,30 @@ import ChordCalculator from './ChordCalculator.js';
 import CloudClient from './CloudClient.js';
 import { INSTRUMENTS, getInstrumentSettings } from './InstrumentDefs.js';
 
-console.log("App Starting (Cloud Enabled)...");
+console.log("App Starting (Cloud & Analytics Integrated)...");
 
 // ==========================================
 // ANALYTICS HELPER (Universal: Web & Extensions)
 // ==========================================
 
-const ANALYTICS_ENDPOINT = 'https://analytics-logger.soroush-zendedel.workers.dev/';
+// [OPTIMIZED] Use relative path for internal API
+// This automatically adapts to localhost or production domain
+const ANALYTICS_ENDPOINT = '/api/analytics';
 
 /**
- * Manages user identity for the Web version (simulating chrome.storage).
- * Uses localStorage for persistent Client ID and sessionStorage for ephemeral Session ID.
- * @returns {Promise<{clientId: string, sessionId: string}>}
+ * Manages user identity for the Web version.
  */
 async function getWebIdentity() {
-    // 1. Client ID (Persistent)
     let clientId = localStorage.getItem('sa_client_id');
     if (!clientId) {
         clientId = self.crypto.randomUUID();
         localStorage.setItem('sa_client_id', clientId);
     }
 
-    // 2. Session ID (Ephemeral with Timeout)
     let sessionId = sessionStorage.getItem('sa_session_id');
     const lastActive = parseInt(localStorage.getItem('sa_last_active') || '0');
     const now = Date.now();
-    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    const SESSION_TIMEOUT = 30 * 60 * 1000; 
 
     if (!sessionId || (now - lastActive) > SESSION_TIMEOUT) {
         sessionId = self.crypto.randomUUID();
@@ -70,16 +68,12 @@ async function getWebIdentity() {
 }
 
 /**
- * Sends analytics data directly via fetch for the Web version.
- * Used when extension APIs are unavailable.
- * @param {string} name - Event name
- * @param {Object} params - Event parameters
+ * Sends analytics data via Fetch API.
  */
 async function sendWebAnalytics(name, params) {
     try {
         const { clientId, sessionId } = await getWebIdentity();
 
-        // [UPDATED] Use Real User ID if logged in via Clerk
         let activeClientId = clientId;
         if (typeof state !== 'undefined' && state.user && state.user.id) {
             activeClientId = state.user.id;
@@ -94,7 +88,7 @@ async function sendWebAnalytics(name, params) {
             }]
         };
 
-        // Fire-and-forget request to avoid blocking UI
+        // Fire-and-forget
         fetch(ANALYTICS_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -107,33 +101,26 @@ async function sendWebAnalytics(name, params) {
 }
 
 /**
- * Main logging function. Automatically detects the environment:
- * 1. Firefox Extension (browser API)
- * 2. Chrome Extension (chrome API)
- * 3. Standard Web (Fetch API)
- * * @param {string} name - Event name
- * @param {Object} params - Event parameters
+ * Main logging function.
  */
 function logEvent(name, params = {}) {
-    // Detect Extension API (Firefox uses 'browser', Chrome uses 'chrome')
+    // Check for Extension Environment
     const extensionApi = (typeof browser !== 'undefined') ? browser : ((typeof chrome !== 'undefined') ? chrome : null);
 
-    // 1. Try sending via Extension API
     if (extensionApi && extensionApi.runtime && extensionApi.runtime.sendMessage) {
         try {
             extensionApi.runtime.sendMessage({ type: 'ANALYTICS_EVENT', name: name, params: params });
         } catch (e) {
-            // Fallback: If extension context is invalid (e.g., connection lost), use Web API
             console.warn('[Analytics Extension] Connection issue, using Web fallback...');
             sendWebAnalytics(name, params);
         }
-    } 
-    // 2. Fallback to Standard Web API
-    else {
+    } else {
+        // Standard Web Environment
         sendWebAnalytics(name, params);
-        console.log('[Analytics Web]', name, params); // Keep local log for debugging
+        // console.log('[Analytics]', name, params); // Uncomment for debug
     }
 }
+
 
 // --- Initialization ---
 const brain = new MusicBrain();
